@@ -2,31 +2,36 @@
 - name: Validate OpenShift login
   shell: oc whoami
   register: ocwhoami
-  failed_when: ocwhoami.rc != 0
+  failed_when: ocwhoami.rc == 1
 
 - debug: msg="You are logged in as {{ ocwhoami.stdout }}"
 
 
-- name: Create project
-  shell: oc new-project "{{ NAMESPACE }}"
-  register: ocnewproject
-  failed_when: "'exists' not in ocnewproject.stderr"
+#- name: Create project
+#  shell: oc new-project "{{ NAMESPACE }}"
+#  register: ocnewproject
+#  failed_when: "'exists' not in ocnewproject.stderr"
 
-#- name: Create templates for artifactory
-#  shell: |
-#    oc create -f {{ role_path }}/files/database-config-map.yaml
-#    oc create -f {{ role_path }}/files/artifactory-licenses-secret.yaml
-#    oc create -f {{ role_path }}/files/artifactory-master-key-secret.yaml
-#    oc create -f {{ role_path }}/files/artifactory-imagestream.yaml
-#    oc create -f {{ role_path }}/files/artifactory-primary-pvc.yaml
-#    oc create -f {{ role_path }}/files/artifactory-secondary-pvc.yaml
-#    oc create -f {{ role_path }}/files/artifactory-tertiary-pvc.yaml
-#    oc create -f {{ role_path }}/files/binarystore-config-map.yaml
-#    oc create -f {{ role_path }}/files/artifactory-data-pvc.yaml
-#    oc create -f {{ role_path }}/files/artifactory-backup-pvc.yaml
-#    oc create -f {{ role_path }}/files/artifactory-primary-deployment.yaml
-#    oc create -f {{ role_path }}/files/artifactory-secondary-deployment.yaml
-#    oc create -f {{ role_path }}/files/artifactory-tertiary-deployment.yaml
+- name: Create templates for artifactory
+  shell: |
+    oc create -f {{ role_path }}/files/database-config-map.yaml
+    oc create -f {{ role_path }}/files/artifactory-licenses-secret.yaml
+    oc create -f {{ role_path }}/files/artifactory-master-key-secret.yaml
+    oc create -f {{ role_path }}/files/artifactory-imagestream.yaml
+    oc create -f {{ role_path }}/files/artifactory-service.yaml
+    oc create -f {{ role_path }}/files/artifactory-primary-pvc.yaml
+    oc create -f {{ role_path }}/files/artifactory-secondary-pvc.yaml
+    oc create -f {{ role_path }}/files/artifactory-tertiary-pvc.yaml
+    oc create -f {{ role_path }}/files/binarystore-config-map.yaml
+    oc create -f {{ role_path }}/files/artifactory-data-pvc.yaml
+    oc create -f {{ role_path }}/files/artifactory-backup-pvc.yaml
+    oc create -f {{ role_path }}/files/artifactory-primary-deployment.yaml
+    oc create -f {{ role_path }}/files/artifactory-secondary-deployment.yaml
+    oc create -f {{ role_path }}/files/artifactory-tertiary-deployment.yaml
+#    oc create -f {{ role_path }}/files/postgresql-secret.yaml
+
+#- name: Create postgres secret from template
+#  shell: oc process postgresql-secret-template  -p NAMESPACE="{{ NAMESPACE }}" -p POSTGRESQL_SECRET_NAME="{{ POSTGRESQL_SECRET_NAME }}" -p POSTGRESQL_USERNAME="{{ POSTGRESQL_USERNAME }}" -p POSTGRESQL_PASSWORD="{{ POSTGRESQL_PASSWORD }}" | oc create -f -
 
 #- name: Create service account for artifactory
 #  shell: oc create serviceaccount artifactory
@@ -40,8 +45,8 @@
   shell: cat {{ role_path }}/files/license | base64
   register: licensebase64
 
-#- name: Create license secret from template
-#  shell: oc process artifactory-licenses-secret-template -p NAMESPACE="{{ NAMESPACE }}" -p LICENSES_SECRET_NAME="{{ LICENSES_SECRET_NAME }}" -p ARTIFACTORY_LICENSES_BASE_64="{{ licensebase64.stdout }}" | oc create -f -
+- name: Create license secret from template
+  shell: oc process artifactory-licenses-secret-template -p NAMESPACE="{{ NAMESPACE }}" -p LICENSES_SECRET_NAME="{{ LICENSES_SECRET_NAME }}" -p ARTIFACTORY_LICENSES_BASE_64="{{ licensebase64.stdout }}" | oc create -f -
 
 - name: Create master key for clustering
   shell: openssl rand -hex 16 > {{ role_path }}/files/master.key
@@ -50,11 +55,11 @@
   shell: cat {{ role_path }}/files/master.key | base64
   register: masterkeybase64
 
-#- name: Create master key secret
-#  shell: oc process artifactory-master-key-secret-template -p NAMESPACE="{{ NAMESPACE }}" -p MASTER_KEY_SECRET_NAME="{{ MASTER_KEY_SECRET_NAME }}" -p ARTIFACTORY_MASTER_KEY_BASE_64="{{ masterkeybase64.stdout }}" | oc create -f - 
+- name: Create master key secret
+  shell: oc process artifactory-master-key-secret-template -p NAMESPACE="{{ NAMESPACE }}" -p MASTER_KEY_SECRET_NAME="{{ MASTER_KEY_SECRET_NAME }}" -p ARTIFACTORY_MASTER_KEY_BASE_64="{{ masterkeybase64.stdout }}" | oc create -f - 
 
-- name: Create configmap for database connection
-  shell: oc process artifactory-database-config-map-template -p NAMESPACE="{{ NAMESPACE }}" -p DATABASE_CONFIG_MAP_NAME="{{ DATABASE_CONFIG_MAP_NAME }}" -p DATABASE_TYPE="{{ DATABASE_TYPE }}" -p DATABASE_HOST="{{ DATABASE_HOST }}" -p DATABASE_PORT="{{ DATABASE_PORT }}" | oc create -f -
+#- name: Create configmap for database connection
+#  shell: oc process artifactory-database-config-map-template -p NAMESPACE="{{ NAMESPACE }}" -p DATABASE_CONFIG_MAP_NAME="{{ DATABASE_CONFIG_MAP_NAME }}" -p DATABASE_TYPE="{{ DATABASE_TYPE }}" -p DATABASE_HOST="{{ DATABASE_HOST }}" -p DATABASE_PORT="{{ DATABASE_PORT }}" | oc create -f -
 
 - name: Create imagestream for artifactory
   shell: oc process artifactory-imagestream-template -p NAMESPACE="{{ NAMESPACE }}" -p ARTIFACTORY_IMAGE_STREAM_NAME="{{ ARTIFACTORY_IMAGE_STREAM_NAME }}" -p ARTIFACTORY_IMAGE_REPOSITORY="{{ ARTIFACTORY_IMAGE_REPOSITORY }}" -p ARTIFACTORY_VERSION="{{ ARTIFACTORY_VERSION }}" | oc create -f -
@@ -71,8 +76,8 @@
 - name: Create service for artifactory
   shell: oc process artifactory-service-template -p NAMESPACE="{{ NAMESPACE }}" -p NAME="{{ NAME }}" | oc create -f -
 
-- name: Create binary store configmap
-  shell: oc process artifactory-binarystore-config-map-template -p NAMESPACE="{{ NAMESPACE }}" -p BINARYSTORE_CONFIG_MAP_NAME="{{ BINARYSTORE_CONFIG_MAP_NAME }}" -p HA_DATA_DIR="{{ HA_DATA_DIR }}" | oc create -f -
+#- name: Create binary store configmap
+#  shell: oc process artifactory-binarystore-config-map-template -p NAMESPACE="{{ NAMESPACE }}" -p BINARYSTORE_CONFIG_MAP_NAME="{{ BINARYSTORE_CONFIG_MAP_NAME }}" -p HA_DATA_DIR="{{ HA_DATA_DIR }}" | oc create -f -
 
 - name: Create artifactory data pvc
   shell: oc process artifactory-data-pvc-template -p NAMESPACE="{{ NAMESPACE }}" -p NAME="{{ NAME }}" -p ARTIFACTORY_DATA_PVC_SIZE="{{ ARTIFACTORY_DATA_PVC_SIZE }}" | oc create -f -
@@ -81,10 +86,10 @@
   shell: oc process artifactory-backup-pvc-template -p NAMESPACE="{{ NAMESPACE }}" -p NAME="{{ NAME }}" -p ARTIFACTORY_BACKUP_PVC_SIZE="{{ ARTIFACTORY_BACKUP_PVC_SIZE }}" | oc create -f -
 
 - name: Create primary artifactory deploment config
-  shell: oc process artifactory-primary-deployment-template -p NAMESPACE="{{ NAMESPACE }}" -p NAME="{{ NAME }}" -p SERVICE_ACCOUNT="{{ SERVICE_ACCOUNT }}" -p INIT_CONTAINER_IMAGE="{{ INIT_CONTAINER_IMAGE }}" -p LICENSES_SECRET_NAME="{{ LICENSES_SECRET_NAME }}" -p MASTER_KEY_SECRET_NAME="{{ MASTER_KEY_SECRET_NAME }}" -p DATABASE_CONFIG_MAP_NAME="{{ DATABASE_CONFIG_MAP_NAME }}" -p "{{ DATABASE_CREDENTIALS_SECRET_NAME }}" -p BINARYSTORE_CONFIG_MAP_NAME="{{ BINARYSTORE_CONFIG_MAP_NAME }}" -p HA_DATA_DIR="{{ HA_DATA_DIR }}" -p HA_BACKUP_DIR="{{ HA_BACKUP_DIR }}" ARTIFACTORY_IMAGE_STREAM_NAME="{{ ARTIFACTORY_IMAGE_STREAM_NAME }}"  -p ARTIFACTORY_VERSION="{{ ARTIFACTORY_VERSION }}" -p ARTIFACTORY_EXTRA_JAVA_OPTIONS="{{ ARTIFACTORY_EXTRA_JAVA_OPTIONS }}" -p CPU_REQUEST="{{ CPU_REQUEST }}" -p CPU_LIMIT="{{ CPU_LIMIT }}" -p MEMORY_REQUEST="{{ MEMORY_REQUEST }}" -p MEMORY_LIMIT="{{ MEMORY_LIMIT }}" | oc create -f -
+  shell: oc process artifactory-primary-deployment-template -p NAMESPACE="{{ NAMESPACE }}" -p NAME="{{ NAME }}" -p SERVICE_ACCOUNT="{{ SERVICE_ACCOUNT }}" -p INIT_CONTAINER_IMAGE="{{ INIT_CONTAINER_IMAGE }}" -p LICENSES_SECRET_NAME="{{ LICENSES_SECRET_NAME }}" -p MASTER_KEY_SECRET_NAME="{{ MASTER_KEY_SECRET_NAME }}" -p DATABASE_CONFIG_MAP_NAME="{{ DATABASE_CONFIG_MAP_NAME }}" -p DATABASE_CREDENTIALS_SECRET_NAME="{{ DATABASE_CREDENTIALS_SECRET_NAME }}" -p BINARYSTORE_CONFIG_MAP_NAME="{{ BINARYSTORE_CONFIG_MAP_NAME }}" -p HA_DATA_DIR="{{ HA_DATA_DIR }}" -p HA_BACKUP_DIR="{{ HA_BACKUP_DIR }}" -p ARTIFACTORY_IMAGE_STREAM_NAME="{{ ARTIFACTORY_IMAGE_STREAM_NAME }}" -p ARTIFACTORY_VERSION="{{ ARTIFACTORY_VERSION }}" -p ARTIFACTORY_EXTRA_JAVA_OPTIONS="{{ ARTIFACTORY_EXTRA_JAVA_OPTIONS }}" -p CPU_REQUEST="{{ CPU_REQUEST }}" -p CPU_LIMIT="{{ CPU_LIMIT }}" -p MEMORY_REQUEST="{{ MEMORY_REQUEST }}" -p MEMORY_LIMIT="{{ MEMORY_LIMIT }}" | oc create -f -
 
 - name: Create secondary artifactory deploment config
-  shell: oc process artifactory-secondary-deployment-template -p NAMESPACE="{{ NAMESPACE }}" -p NAME="{{ NAME }}" -p SERVICE_ACCOUNT="{{ SERVICE_ACCOUNT }}" -p INIT_CONTAINER_IMAGE="{{ INIT_CONTAINER_IMAGE }}" -p LICENSES_SECRET_NAME="{{ LICENSES_SECRET_NAME }}" -p MASTER_KEY_SECRET_NAME="{{ MASTER_KEY_SECRET_NAME }}" -p DATABASE_CONFIG_MAP_NAME="{{ DATABASE_CONFIG_MAP_NAME }}" -p "{{ DATABASE_CREDENTIALS_SECRET_NAME }}" -p BINARYSTORE_CONFIG_MAP_NAME="{{ BINARYSTORE_CONFIG_MAP_NAME }}" -p HA_DATA_DIR="{{ HA_DATA_DIR }}" -p HA_BACKUP_DIR="{{ HA_BACKUP_DIR }}" ARTIFACTORY_IMAGE_STREAM_NAME="{{ ARTIFACTORY_IMAGE_STREAM_NAME }}"  -p ARTIFACTORY_VERSION="{{ ARTIFACTORY_VERSION }}" -p ARTIFACTORY_EXTRA_JAVA_OPTIONS="{{ ARTIFACTORY_EXTRA_JAVA_OPTIONS }}" -p CPU_REQUEST="{{ CPU_REQUEST }}" -p CPU_LIMIT="{{ CPU_LIMIT }}" -p MEMORY_REQUEST="{{ MEMORY_REQUEST }}" -p MEMORY_LIMIT="{{ MEMORY_LIMIT }}" | oc create -f -
+  shell: oc process artifactory-secondary-deployment-template -p NAMESPACE="{{ NAMESPACE }}" -p NAME="{{ NAME }}" -p SERVICE_ACCOUNT="{{ SERVICE_ACCOUNT }}" -p INIT_CONTAINER_IMAGE="{{ INIT_CONTAINER_IMAGE }}" -p LICENSES_SECRET_NAME="{{ LICENSES_SECRET_NAME }}" -p MASTER_KEY_SECRET_NAME="{{ MASTER_KEY_SECRET_NAME }}" -p DATABASE_CONFIG_MAP_NAME="{{ DATABASE_CONFIG_MAP_NAME }}" -p DATABASE_CREDENTIALS_SECRET_NAME="{{ DATABASE_CREDENTIALS_SECRET_NAME }}" -p BINARYSTORE_CONFIG_MAP_NAME="{{ BINARYSTORE_CONFIG_MAP_NAME }}" -p HA_DATA_DIR="{{ HA_DATA_DIR }}" -p HA_BACKUP_DIR="{{ HA_BACKUP_DIR }}" -p ARTIFACTORY_IMAGE_STREAM_NAME="{{ ARTIFACTORY_IMAGE_STREAM_NAME }}" -p ARTIFACTORY_VERSION="{{ ARTIFACTORY_VERSION }}" -p ARTIFACTORY_EXTRA_JAVA_OPTIONS="{{ ARTIFACTORY_EXTRA_JAVA_OPTIONS }}" -p CPU_REQUEST="{{ CPU_REQUEST }}" -p CPU_LIMIT="{{ CPU_LIMIT }}" -p MEMORY_REQUEST="{{ MEMORY_REQUEST }}" -p MEMORY_LIMIT="{{ MEMORY_LIMIT }}" | oc create -f -
 
 - name: Create tertiary artifactory deploment config
-  shell: oc process artifactory-tertiary-deployment-template -p NAMESPACE="{{ NAMESPACE }}" -p NAME="{{ NAME }}" -p SERVICE_ACCOUNT="{{ SERVICE_ACCOUNT }}" -p INIT_CONTAINER_IMAGE="{{ INIT_CONTAINER_IMAGE }}" -p LICENSES_SECRET_NAME="{{ LICENSES_SECRET_NAME }}" -p MASTER_KEY_SECRET_NAME="{{ MASTER_KEY_SECRET_NAME }}" -p DATABASE_CONFIG_MAP_NAME="{{ DATABASE_CONFIG_MAP_NAME }}" -p "{{ DATABASE_CREDENTIALS_SECRET_NAME }}" -p BINARYSTORE_CONFIG_MAP_NAME="{{ BINARYSTORE_CONFIG_MAP_NAME }}" -p HA_DATA_DIR="{{ HA_DATA_DIR }}" -p HA_BACKUP_DIR="{{ HA_BACKUP_DIR }}" ARTIFACTORY_IMAGE_STREAM_NAME="{{ ARTIFACTORY_IMAGE_STREAM_NAME }}"  -p ARTIFACTORY_VERSION="{{ ARTIFACTORY_VERSION }}" -p ARTIFACTORY_EXTRA_JAVA_OPTIONS="{{ ARTIFACTORY_EXTRA_JAVA_OPTIONS }}" -p CPU_REQUEST="{{ CPU_REQUEST }}" -p CPU_LIMIT="{{ CPU_LIMIT }}" -p MEMORY_REQUEST="{{ MEMORY_REQUEST }}" -p MEMORY_LIMIT="{{ MEMORY_LIMIT }}" | oc create -f -
+  shell: oc process artifactory-tertiary-deployment-template -p NAMESPACE="{{ NAMESPACE }}" -p NAME="{{ NAME }}" -p SERVICE_ACCOUNT="{{ SERVICE_ACCOUNT }}" -p INIT_CONTAINER_IMAGE="{{ INIT_CONTAINER_IMAGE }}" -p LICENSES_SECRET_NAME="{{ LICENSES_SECRET_NAME }}" -p MASTER_KEY_SECRET_NAME="{{ MASTER_KEY_SECRET_NAME }}" -p DATABASE_CONFIG_MAP_NAME="{{ DATABASE_CONFIG_MAP_NAME }}" -p DATABASE_CREDENTIALS_SECRET_NAME="{{ DATABASE_CREDENTIALS_SECRET_NAME }}" -p BINARYSTORE_CONFIG_MAP_NAME="{{ BINARYSTORE_CONFIG_MAP_NAME }}" -p HA_DATA_DIR="{{ HA_DATA_DIR }}" -p HA_BACKUP_DIR="{{ HA_BACKUP_DIR }}" -p ARTIFACTORY_IMAGE_STREAM_NAME="{{ ARTIFACTORY_IMAGE_STREAM_NAME }}" -p ARTIFACTORY_VERSION="{{ ARTIFACTORY_VERSION }}" -p ARTIFACTORY_EXTRA_JAVA_OPTIONS="{{ ARTIFACTORY_EXTRA_JAVA_OPTIONS }}" -p CPU_REQUEST="{{ CPU_REQUEST }}" -p CPU_LIMIT="{{ CPU_LIMIT }}" -p MEMORY_REQUEST="{{ MEMORY_REQUEST }}" -p MEMORY_LIMIT="{{ MEMORY_LIMIT }}" | oc create -f -
