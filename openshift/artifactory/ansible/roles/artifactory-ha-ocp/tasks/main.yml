@@ -7,8 +7,8 @@
 - debug: msg="You are logged in as {{ ocwhoami.stdout }}"
 
 
-- name: Create artifactory project
-  shell: oc new-project artifactory
+- name: Create project
+  shell: oc new-project "{{ NAMESPACE }}"
   register: ocnewproject
   failed_when: "'exists' not in ocnewproject.stderr"
 
